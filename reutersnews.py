@@ -25,7 +25,9 @@ def get_story_body(url):
     soup = BeautifulSoup(raw, 'html.parser')
 
     article_body = soup.find("div", {"class": "StandardArticleBody_body"})
-    return article_body.text
+    body_text = "".join([p.text for p in article_body.find_all('p')])
+
+    return body_text
 
 
 def get_story(ticker, date):
