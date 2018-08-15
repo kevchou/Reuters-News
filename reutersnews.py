@@ -1,3 +1,5 @@
+# TODO: clean news story body. it is currently getting image text too
+
 import urllib.request
 from bs4 import BeautifulSoup
 import pandas as pd
