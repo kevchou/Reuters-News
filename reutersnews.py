@@ -3,16 +3,32 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import datetime as dt
 
-
+BASEURL = 'https://www.reuters.com/'
 
 def generate_date_list(start, end):
+    """Returns a list of datetime objects (days) between from $start to $end.
+    """
     start_dt = dt.datetime.strptime(start, '%Y-%m-%d')
     end_dt = dt.datetime.strptime(end, '%Y-%m-%d')
 
-    dates = [start_dt + dt.timedelta(days=x) for x in range(0, (end_dt - start_dt).days)]
+    dates = [start_dt + dt.timedelta(days=x) for x in range(0, (end_dt - start_dt).days+1)]
     return dates
 
+
+def get_story_body(url):
+    """Webscrapes the body text of input news article
+    """
+    request = urllib.request.urlopen(url)
+    raw = request.read()
+    soup = BeautifulSoup(raw, 'html.parser')
+
+    article_body = soup.find("div", {"class": "StandardArticleBody_body"})
+    return article_body.text
+
+
 def get_story(ticker, date):
+    """Gets all stories for input company $ticker for $date
+    """
     url = f'https://www.reuters.com/finance/stocks/company-news/{ticker}.O?date={date}'
 
     # Get html from URL and create soup object
@@ -37,7 +53,8 @@ def get_story(ticker, date):
 
         company_news['top_story'] = {
             'text': top_text,
-            'url': top_link
+            'url': top_link,
+            'body': get_story_body(BASEURL + top_link)
         }
 
     # Other Stories
@@ -53,39 +70,26 @@ def get_story(ticker, date):
 
             company_news['other_stories'].append({
                 'text': story_text,
-                'url': story_link
+                'url': story_link,
+                'body': get_story_body(BASEURL + story_link)
             })
 
     return company_news
 
 
+def get_all_stories(ticker, start, end):
+    """Gets all stories for input $ticker, for every date between $start and $end
+    """
+    # Get and convert dates to right format for url
+    dates = generate_date_list(start, end)
+    dates = [f"{str(d.month).zfill(2)}{str(d.day).zfill(2)}{d.year}" for d in dates] # Date needs to be MMDDYYYY
 
-ticker = 'AAPL'
+    # Variable to stores all news articles
+    all_news = []
+    for i, date in enumerate(dates):
+        all_news.append(get_story(ticker, date))
 
-# Generate list of dates
-start = '2018-01-01'
-end = '2018-01-07'
+    # Filter out dates without stories
+    all_news = [n for n in all_news if n.get('top_story')]
 
-dates = generate_date_list(start, end)
-
-# Convert date to right format for url
-dates = [f"{str(d.month).zfill(2)}{str(d.day).zfill(2)}{d.year}" for d in dates]
-
-# Stores all news articles
-all_news = []
-
-for i, date in enumerate(dates):
-    all_news.append(get_story(ticker, date))
-
-
-##### Get full news article
-url = all_news[2]['top_story']['url']
-url2 = 'https://www.reuters.com/' + url
-
-request = urllib.request.urlopen(url2)
-raw = request.read()
-soup = BeautifulSoup(raw, 'html.parser')
-
-article_body = soup.find("div", {"class": "StandardArticleBody_body"})
-article_body.text
-
+    return all_news
