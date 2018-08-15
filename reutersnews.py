@@ -1,4 +1,5 @@
 # TODO: Remove duplicate links in other stories. (check URL)
+# TODO: Extract article post time
 
 import urllib.request
 from bs4 import BeautifulSoup
