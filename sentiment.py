@@ -22,9 +22,10 @@ news_day = aapl[0]
 
 for news_day in aapl:
     print(news_day['date'])
-    print("Top Story")
-    print(sid.polarity_scores(news_day['top_story']['body']))
+    print("Top Story", news_day['top_story']['headline'])
+    print(sid.polarity_scores(news_day['top_story']['body'])['compound'])
 
     print("Other Stories")
-    for news in news_day['other_stories']:
-        print(sid.polarity_scores(news['body']))
+    if news_day.get('other_stories'):
+        for news in news_day['other_stories']:
+            print(news['headline'], sid.polarity_scores(news['body'])['compound'])
