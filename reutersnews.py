@@ -1,5 +1,3 @@
-# TODO: Remove duplicate links in other stories. (check URL)
-
 import urllib.request
 from bs4 import BeautifulSoup
 import pandas as pd
