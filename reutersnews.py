@@ -1,10 +1,10 @@
 # TODO: Remove duplicate links in other stories. (check URL)
-# TODO: Extract article post time
 
 import urllib.request
 from bs4 import BeautifulSoup
 import pandas as pd
 import datetime as dt
+import re
 
 BASEURL = 'https://www.reuters.com/'
 
@@ -25,10 +25,31 @@ def get_story_body(url):
     raw = request.read()
     soup = BeautifulSoup(raw, 'html.parser')
 
-    article_body = soup.find("div", {"class": "StandardArticleBody_body"})
-    body_text = "".join([p.text for p in article_body.find_all('p')])
+    date_text = soup.find('div', {'class': 'ArticleHeader_date'}).text
+    time_re = re.search("([0-9]+:[0-9]+ [a-zA-Z]{2})", date_text)
+    time = time_re.groups()[0]
 
-    return body_text
+    article_body = soup.find("div", {"class": "StandardArticleBody_body"})
+    body = "".join([p.text for p in article_body.find_all('p')])
+
+    return body, time
+
+
+def parse_story(story, date):
+    header = story.find('h2')
+
+    article_url = header.find('a').get('href')
+    headline = header.text
+
+    body, post_time = get_story_body(BASEURL + article_url)
+
+    return {
+        'headline': headline,
+        'body': body,
+        'url': article_url,
+        'post_date': dt.datetime.strptime(date + ' ' + post_time, '%m%d%Y %I:%M %p')
+    }
+
 
 
 def get_story(ticker, date):
@@ -42,7 +63,8 @@ def get_story(ticker, date):
     soup = BeautifulSoup(raw, 'html.parser')
 
     company_news = {
-        'date': date
+        'date': dt.datetime.strptime(date, '%m%d%Y'),
+        'url': url
     }
 
     # Finds the company news articles
@@ -51,16 +73,7 @@ def get_story(ticker, date):
     # Top Story
     top_story = news[0]
     if top_story.find('h2'):
-        top_header = top_story.find('h2')
-
-        top_link = top_header.find('a').get('href')
-        top_text = top_header.text
-
-        company_news['top_story'] = {
-            'text': top_text,
-            'url': top_link,
-            'body': get_story_body(BASEURL + top_link)
-        }
+        company_news['top_story'] = parse_story(top_story, date)
 
     # Other Stories
     other_stories = news[1].findAll('div', {'class': 'feature'})
@@ -68,16 +81,7 @@ def get_story(ticker, date):
         company_news['other_stories'] = []
         
         for s in other_stories:
-            story_header = s.find('h2')
-
-            story_link = story_header.find('a').get('href')
-            story_text = story_header.text
-
-            company_news['other_stories'].append({
-                'text': story_text,
-                'url': story_link,
-                'body': get_story_body(BASEURL + story_link)
-            })
+            company_news['other_stories'].append(parse_story(s, date))
 
     return company_news
 
